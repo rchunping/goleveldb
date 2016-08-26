@@ -12,7 +12,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/syndtr/goleveldb/leveldb/util"
+	"github.com/rchunping/goleveldb/leveldb/util"
 )
 
 type FileType int

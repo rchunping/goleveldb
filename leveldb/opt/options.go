@@ -10,9 +10,9 @@ package opt
 import (
 	"math"
 
-	"github.com/syndtr/goleveldb/leveldb/cache"
-	"github.com/syndtr/goleveldb/leveldb/comparer"
-	"github.com/syndtr/goleveldb/leveldb/filter"
+	"github.com/rchunping/goleveldb/leveldb/cache"
+	"github.com/rchunping/goleveldb/leveldb/comparer"
+	"github.com/rchunping/goleveldb/leveldb/filter"
 )
 
 const (
@@ -136,6 +136,13 @@ const (
 	// NoStrict disables all strict flags. Override default strict flags.
 	NoStrict = ^StrictAll
 )
+
+type RecoverDumpData struct {
+	KeyType uint
+	Seq     uint64
+	Key     []byte
+	Value   []byte
+}
 
 // Options holds the optional parameters for the DB at large.
 type Options struct {
@@ -352,6 +359,15 @@ type Options struct {
 	//
 	// The default value is 8.
 	WriteL0SlowdownTrigger int
+
+	// Recover的时候dump数据到chan中
+	RecoverDumpChan chan RecoverDumpData // k,v
+
+	// Recover的时候强制重建 sst文件
+	ForceRebuild bool
+
+	// Recover 选择ForceRebuild=true的时候，直接标记drop，继续后面处理
+	DropTableOnRebuildError bool
 }
 
 func (o *Options) GetAltFilters() []filter.Filter {

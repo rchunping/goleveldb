@@ -17,14 +17,14 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/syndtr/goleveldb/leveldb/errors"
-	"github.com/syndtr/goleveldb/leveldb/iterator"
-	"github.com/syndtr/goleveldb/leveldb/journal"
-	"github.com/syndtr/goleveldb/leveldb/memdb"
-	"github.com/syndtr/goleveldb/leveldb/opt"
-	"github.com/syndtr/goleveldb/leveldb/storage"
-	"github.com/syndtr/goleveldb/leveldb/table"
-	"github.com/syndtr/goleveldb/leveldb/util"
+	"github.com/rchunping/goleveldb/leveldb/errors"
+	"github.com/rchunping/goleveldb/leveldb/iterator"
+	"github.com/rchunping/goleveldb/leveldb/journal"
+	"github.com/rchunping/goleveldb/leveldb/memdb"
+	"github.com/rchunping/goleveldb/leveldb/opt"
+	"github.com/rchunping/goleveldb/leveldb/storage"
+	"github.com/rchunping/goleveldb/leveldb/table"
+	"github.com/rchunping/goleveldb/leveldb/util"
 )
 
 // DB is a LevelDB database.
@@ -380,11 +380,18 @@ func recoverTable(s *session, o *opt.Options) error {
 		// Scan the table.
 		for iter.Next() {
 			key := iter.Key()
-			_, seq, _, kerr := parseInternalKey(key)
+			_uk, seq, _kt, kerr := parseInternalKey(key)
 			if kerr != nil {
 				tcorruptedKey++
 				continue
 			}
+
+			if o.RecoverDumpChan != nil {
+				if _kt == keyTypeVal || true {
+					o.RecoverDumpChan <- opt.RecoverDumpData{uint(_kt), seq, append([]byte{}, _uk...), append([]byte{}, iter.Value()...)}
+				}
+			}
+
 			tgoodKey++
 			if seq > tSeq {
 				tSeq = seq
@@ -411,13 +418,22 @@ func recoverTable(s *session, o *opt.Options) error {
 		}
 
 		if tgoodKey > 0 {
-			if tcorruptedKey > 0 || tcorruptedBlock > 0 {
+			if tcorruptedKey > 0 || tcorruptedBlock > 0 || o.ForceRebuild {
 				// Rebuild the table.
 				s.logf("table@recovery rebuilding @%d", fd.Num)
 				iter := tr.NewIterator(nil, nil)
 				tmpFd, newSize, err := buildTable(iter)
 				iter.Release()
 				if err != nil {
+
+					if o.DropTableOnRebuildError {
+						closed = true
+						reader.Close()
+						droppedTable++
+						s.logf("table@recovery dropped @%d Gk·%d Ck·%d Cb·%d S·%d Q·%d", fd.Num, tgoodKey, tcorruptedKey, tcorruptedBlock, size, tSeq)
+						return nil
+					}
+
 					return err
 				}
 				closed = true
@@ -451,7 +467,13 @@ func recoverTable(s *session, o *opt.Options) error {
 
 		for _, fd := range fds {
 			if err := recoverTable(fd); err != nil {
-				return err
+				// 如果不强制继续，那么报错退出
+				if !o.DropTableOnRebuildError {
+					return err
+				} else {
+					//标记删除
+					rec.delTable(0, fd.Num)
+				}
 			}
 		}
 

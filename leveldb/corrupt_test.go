@@ -13,9 +13,9 @@ import (
 	"math/rand"
 	"testing"
 
-	"github.com/syndtr/goleveldb/leveldb/filter"
-	"github.com/syndtr/goleveldb/leveldb/opt"
-	"github.com/syndtr/goleveldb/leveldb/storage"
+	"github.com/rchunping/goleveldb/leveldb/filter"
+	"github.com/rchunping/goleveldb/leveldb/opt"
+	"github.com/rchunping/goleveldb/leveldb/storage"
 )
 
 const ctValSize = 1000
