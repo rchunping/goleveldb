@@ -3,7 +3,7 @@ CHANGE
 
 Add some features for personal purposes.
 
-See http://github.com/rchunping/leveldb-tool
+See http://github.com/rchunping/leveldb-tools
 
 
 2016.8.26
